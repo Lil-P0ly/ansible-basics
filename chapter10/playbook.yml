@@ -1,0 +1,90 @@
+---
+- name: Filtration
+  hosts: webservers
+  become: true
+
+  vars:
+    database_host: "10.101.11.2"
+
+  tasks:
+    - name: "Test default filter" 
+      debug:
+        msg: "Database is on the IP-address {{ host }}"
+      vars:
+        host: "{{ database_host | default('localhost') }}"
+
+    - name: "Run failed prog and print result"
+      shell: ls -la {{ ansible_env.HOME }} | grep '.'
+      register: result
+      ignore_errors: true
+
+    - debug: var=result
+
+    - debug:
+        msg: Stop Running my prog if PREV. was failed
+      failed_when: result.failed
+
+    - name: Ensure that index.html exists
+      vars:
+        homepage: /tmp/index.html
+      copy:
+        src: "files/{{ homepage | basename }}"
+        dest: "{{ homepage }}"
+
+- name: Lookups
+  hosts: webservers
+  become: true
+
+  tasks:
+    - name: "Ensure, that my SSH key exists"
+      authorized_key:
+        user: "vagrant"
+        key: "{{ lookup('file', item) }}"
+        state: present
+      with_first_found:
+        - "~/.ssh/id_ed25519.pub"
+        - "~/.ssh/id_rsa.pub"
+        - "~/.ssh/id_ecdsa.pub"
+
+    - name: "Ensure, that user-vagrant have our PUB key"
+      authorized_key:
+        user: "vagrant"
+        key: "{{ lookup('pipe', pumpkin_cmd) }}"
+        state: present
+      vars:
+        pumpkin_cmd: 'ssh-keygen -y -f .vagrant/machines/web/virtualbox/private_key'
+
+    - name: Iterate with lookup 
+      debug:
+        msg: "Kek KPI = {{ item.kpi }} DEPT = {{ item.dept }}; INDEX = {{ i }}"
+      loop:
+        - kpi: "x"
+          dept: "xx"
+        - kpi: "y"
+          dept: "yy"
+        - kpi: "z"
+          dept: "zz" 
+      loop_control:
+        index_var: i  
+
+    - name: "Iterate over lines in a file"
+      shell:
+        echo "{{ item }}"
+      with_lines:
+        - cat files/names.txt
+
+    - name: "Print network settings"
+      debug:
+        msg: "kek. KEY = {{ item.key }}; VALUE = {{ item.value }}"
+      with_dict:
+        - "{{ansible_enp0s8.ipv4}}"
+
+    - name: "Ensure that users exists"
+      user:
+        name: "{{ user.name }}_{{ i }}"
+      with_items:
+        - name: Bob
+        - name: Tom
+      loop_control:
+        loop_var: user
+        index_var: i

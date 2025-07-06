@@ -1,0 +1,267 @@
+---
+- name: Deploy mizzanine with ROLES
+
+  hosts: all
+
+  vars:
+    proj_app: mezzanine_example
+    proj_name: "{{ proj_app }}"
+
+    mezzanine_proj_path: "{{ ansible_env.HOME }}/mezzanine/{{ mezzanine_proj_name }}"
+    locale: 'en_US.UTF-8'
+    live_hostname: 192.168.56.10.nip.io
+    domains:
+      - 192.168.56.10.nip.io
+      - www.192.168.56.10.nip.io
+
+  vars_files:
+    - secrets.yml
+
+  roles:
+
+
+    - role: database
+      tags: database
+
+      database_name: "{{ proj_name }}"
+      database_user: "{{ proj_name }}"
+
+    - role: mezzanine
+      tags: mezzanine
+      database_host: '127.0.0.1'
+
+    - role: nginx
+      tags: nginx
+
+    # - role: nginx
+    #   tags: nginx
+
+
+    # - role: oefenweb.ntp
+...      
+# ---
+# - name: Deploy mizzanine
+#   hosts: all
+
+#   vars:
+#     repo_url: "https://github.com/ansiblebook/mezzanine_example.git"
+#     proj_app: mezzanine_example
+#     proj_name: "{{ proj_app }}"
+#     proj_path: "{{ ansible_env.HOME }}/mezzanine/{{ proj_name }}"
+#     venv_home: "{{ ansible_env.HOME }}/.virtualenvs"
+#     venv_path: "{{ venv_home }}/{{ proj_name }}"
+#     locale: 'en_US.UTF-8'
+#     database_name: "{{ proj_name }}"
+#     database_user: "{{ proj_name }}"
+#     db_pass: P@ssw0rd
+#     conf_path: "/etc/nginx/conf"
+#     tls_enabled: true
+#     domains:
+#       - 192.168.56.10.nip.io
+#       - www.192.168.56.10.nip.io
+#     live_hostname: 192.168.56.10.nip.io
+#     gunicorn_procname: gunicorn_mezzanine
+#     user: "{{ ansible_user }}"
+
+#     secret_key: P@ssw0rd
+#     nevercache_key: 4ije9129ej012j1njj
+
+#     settings_path: "{{ proj_path }}/{{ proj_name }}"
+
+#     python: "{{ venv_path }}/bin/python3"
+#     manage: "{{ python }} {{ proj_path }}/manage.py"
+#     admin_pass: P@SSw0rd1fqwdrwefwef
+
+#   tasks:
+#     - name: Install apt packages
+#       become: true
+#       apt:
+#         update_cache: true
+#         cache_valid_time: 3600
+#         pkg:
+#         - acl
+#         - git
+#         - libjpeg-dev
+#         - libpq-dev
+#         - memcached
+#         - nginx
+#         - postgresql
+#         - python3-dev
+#         - python3-pip
+#         - python3-venv
+#         - python3-psycopg2
+#         - supervisor
+#     - name: Create project path
+#       file:
+#         path: "{{ proj_path }}"
+#         state: directory
+#         mode: '0755'
+
+#     - name: Create a logs directory
+#       file:
+#         path: "{{ ansible_env.HOME }}/logs"
+#         state: directory
+#         mode: '0755'
+
+#     - name: Check out the repository on the host
+#       git:
+#         repo: "{{ repo_url }}"
+#         dest: "{{ proj_path }}"
+#         version: master
+
+#     - name: Create python3 virtualenv
+#       pip:
+#         name:
+#           - pip
+#           - wheel
+#           - setuptools
+#         state: latest
+#         virtualenv: "{{ venv_path }}"
+#         virtualenv_command: /usr/bin/python3 -m venv
+
+#     - name: Copy requirements.txt to home directory
+#       copy:
+#         src: requirements.txt
+#         dest: "{{ ansible_env.HOME }}/requirements.txt"
+#         mode: '0644'
+
+#     - name: Install packages listed in requirements.txt
+#       pip:
+#         virtualenv: "{{ venv_path }}"
+#         requirements: "{{ ansible_env.HOME }}/requirements.txt"
+
+
+#     - name: Create project locale
+#       become: true
+#       locale_gen:
+#         name: "{{ locale }}"
+
+#     - name: Create a DB user
+#       become: true
+#       become_user: postgres
+#       postgresql_user:
+#         name: "{{ database_user }}"
+#         password: "{{ db_pass }}"
+
+#     - name: Create the database
+#       become: true
+#       become_user: postgres
+#       postgresql_db:
+#         name: "{{ database_name }}"
+#         owner: "{{ database_user }}"
+#         encoding: UTF8
+#         lc_ctype: "{{ locale }}"
+#         lc_collate: "{{ locale }}"
+#         template: template0
+
+
+#     - name: Ensure config path exists
+#       become: true
+#       file:
+#         path: "{{ conf_path }}"
+#         state: directory
+#         mode: '0755'
+
+#     - name: Create tls certificates
+#       become: true
+#       command: >
+#         openssl req -new -x509 -nodes -out {{ proj_name }}.crt
+#         -keyout {{ proj_name }}.key -subj '/CN={{ domains[0] }}' -days 365
+#       args:
+#         chdir: "{{ conf_path }}"
+#         creates: "{{ conf_path }}/{{ proj_name }}.crt"
+
+#       when: tls_enabled
+#       notify: Restart nginx
+
+#     - name: Remove the default nginx config file
+#       become: true
+#       file:
+#         path: /etc/nginx/sites-enabled/default
+#         state: absent
+#       notify: Restart nginx
+
+#     - name: Set the nginx config file
+#       become: true
+#       template:
+#         src: nginx.conf.j2
+#         dest: /etc/nginx/sites-available/mezzanine.conf
+#         mode: '0640'
+#       notify: Restart nginx
+
+#     - name: Enable the nginx config file
+#       become: true
+#       file:
+#         src: /etc/nginx/sites-available/mezzanine.conf
+#         dest: /etc/nginx/sites-enabled/mezzanine.conf
+#         state: link
+#         mode: '0777'
+#       notify: Restart nginx
+
+#     - name: Set the supervisor config file
+#       become: true
+#       template:
+#         src: supervisor.conf.j2
+#         dest: /etc/supervisor/conf.d/mezzanine.conf
+#         mode: '0640'
+#       notify: Restart supervisor
+            
+#     - name: Install poll twitter cron job
+#       cron:
+#         name: "poll twitter"
+#         minute: "*/5"
+#         user: "{{ user }}"
+#         job: "{{ manage }} poll_twitter"
+
+
+#     - name: Set the gunicorn config file
+#       template:
+#         src: templates/gunicorn.conf.py.j2
+#         dest: "{{ proj_path }}/gunicorn.conf.py"
+#         mode: '0750'
+
+#     - name: Generate the settings file
+#       template:
+#         src: templates/local_settings.py.j2
+#         dest: "{{ settings_path }}/local_settings.py"
+#         mode: '0750'
+
+
+#     - name: Apply migrations to create the database, collect static content
+#       django_manage:
+#         command: "{{ item }}"
+#         app_path: "{{ proj_path }}"
+#         virtualenv: "{{ venv_path }}"
+#       loop:
+#         - migrate
+#         - collectstatic
+
+#     - name: Set the site id
+#       script: scripts/setsite.py
+#       environment:
+#         PATH: "{{ venv_path }}/bin"
+#         PROJECT_DIR: "{{ proj_path }}"
+#         PROJECT_APP: "{{ proj_app }}"
+#         DJANGO_SETTINGS_MODULE: "{{ proj_app }}.settings"
+#         WEBSITE_DOMAIN: "{{ live_hostname }}"
+
+#     # - name: Set the admin password
+#     #   script: scripts/setadmin.py
+#     #   environment:
+#     #     PATH: "{{ venv_path }}/bin"
+#     #     PROJECT_DIR: "{{ proj_path }}"
+#     #     PROJECT_APP: "{{ proj_app }}"
+#     #     ADMIN_PASSWORD: "{{ admin_pass }}"
+
+#   handlers:
+#     - name: Restart supervisor
+#       become: true
+#       supervisorctl:
+#         name: "{{ gunicorn_procname }}"
+#         state: restarted
+
+#     - name: Restart nginx
+#       become: true
+#       service:
+#         name: nginx
+#         state: restarted

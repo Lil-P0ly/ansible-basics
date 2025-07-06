@@ -1,0 +1,37 @@
+# Эти настройки уникальные и никому не должны передаваться.
+SECRET_KEY = "{{ secret_key }}"
+NEVERCACHE_KEY = "{{ nevercache_key }}"
+
+ALLOWED_HOSTS = [
+    {% for domain in domains %}
+    "{{ domain }}",
+    {% endfor %}
+]
+
+DATABASES = {
+    "default": {
+        # Может завершаться на "postgresql_psycopg2", "mysql", "sqlite3" или "oracle".
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        # Имя БД или путь к файлу БД, если используется sqlite3.
+        "NAME": "{{ proj_name }}",
+        # Не используется с sqlite3.
+        "USER": "{{ proj_name }}",
+        # Не используется с sqlite3.
+        "PASSWORD": "{{ db_pass }}",
+        # Для локального хоста можно указать пустую строку. Не используется с sqlite3.
+        "HOST": "127.0.0.1",
+        # Пустая строка соответствует порту по умолчанию. Не используется с sqlite3.
+        "PORT": "",
+    }
+}
+
+CACHE_MIDDLEWARE_KEY_PREFIX = "{{ proj_name }}"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
+        "LOCATION": "127.0.0.1:11211",
+    }
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"

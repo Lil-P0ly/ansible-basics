@@ -1,0 +1,4 @@
+---
+# vars file for nginx
+conf_path: "/etc/nginx/conf"
+proj_path: "{{ ansible_env.HOME }}/mezzanine/{{ proj_name }}"
